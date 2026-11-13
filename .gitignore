@@ -1,0 +1,15 @@
+# --- Secrets: never commit Firebase config (each developer adds their own) ---
+GoogleService-Info.plist
+
+# --- Xcode per-user / build files ---
+xcuserdata/
+*.xcuserstate
+DerivedData/
+build/
+*.ipa
+*.dSYM.zip
+*.dSYM
+
+# --- macOS junk ---
+.DS_Store
+__MACOSX/
