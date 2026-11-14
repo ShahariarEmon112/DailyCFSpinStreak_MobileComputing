@@ -44,8 +44,10 @@ struct RegisterView: View {
 
                 PrimaryButton(title: "Create Account", systemImage: "person.badge.plus",
                               isLoading: authVM.isLoading) {
-                    authVM.register(name: name, email: email,
-                                    password: password, confirmPassword: confirmPassword)
+                    Task {
+                        await authVM.register(name: name, email: email,
+                                              password: password, confirmPassword: confirmPassword)
+                    }
                 }
             }
             .padding(24)

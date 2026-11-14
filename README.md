@@ -9,7 +9,7 @@ Built as a Mobile Computing lab mini-project.
 
 - [x] Step 1: Project inspection and plan
 - [x] Step 2: SwiftUI UI and navigation (placeholder data)
-- [ ] Step 3: Firebase Authentication and Firestore
+- [x] Step 3: Firebase Authentication and Firestore
 - [ ] Step 4: Codeforces API and JSON parsing
 - [ ] Step 5: Spin, timer, hints, retry list, history with real data
 - [ ] Step 6: Accepted-submission verification and daily streak
@@ -29,6 +29,22 @@ Built as a Mobile Computing lab mini-project.
 3. Xcode resolves the Firebase Swift package automatically (FirebaseAuth, FirebaseCore, FirebaseFirestore).
 4. Choose an iPhone simulator and press **Run** (⌘R).
 
+## Firebase configuration
+
+1. Firebase Console → **Authentication** → Sign-in method → enable **Email/Password**.
+2. Firebase Console → **Firestore Database** → Create database.
+3. Firestore → **Rules**: paste the contents of [`firestore.rules`](firestore.rules) and click **Publish**
+   (each user can only read/write their own data).
+4. The iOS app's bundle ID in Firebase must match Xcode (`com.example.DailyCFSpinStreak`).
+
+Firestore layout:
+
+```
+users/{uid}                      profile: name, email, cfHandle, currentStreak, longestStreak, verifiedDays
+users/{uid}/history/{problemId}  one solve attempt (Step 5)
+users/{uid}/retry/{problemId}    saved problem (Step 5)
+```
+
 ## Folder structure (MVVM)
 
 ```
@@ -37,7 +53,7 @@ DailyCFSpinStreak/
 ├── ContentView.swift            root: Login flow or MainTabView
 ├── Models/                      Problem, AppUser, SolveHistory, UserStats, SampleData
 ├── ViewModels/                  Authentication, Problem, Timer, Statistics
-├── Services/                    (Step 3+) Firebase, Codeforces API, Streak
+├── Services/                    FirebaseService (Step 3), Codeforces API, Streak
 ├── Views/                       Auth, Dashboard, Spin, History, Retry, Profile
 └── Components/                  Theme + reusable views (cards, buttons, chips...)
 ```

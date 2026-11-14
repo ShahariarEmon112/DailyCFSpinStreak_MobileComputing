@@ -2,8 +2,8 @@
 //  ContentView.swift
 //  DailyCFSpinStreak
 //
-//  Root view: shows the Login flow when logged out,
-//  and the main tab bar when logged in.
+//  Root view: a splash while the saved login is checked, then
+//  the Login flow (logged out) or the main tab bar (logged in).
 //
 
 import SwiftUI
@@ -15,7 +15,10 @@ struct ContentView: View {
 
     var body: some View {
         Group {
-            if authVM.isLoggedIn {
+            if authVM.isCheckingSession {
+                LoadingView(message: "Signing you in...")
+                    .screenBackground()
+            } else if authVM.isLoggedIn {
                 MainTabView(authVM: authVM)
             } else {
                 NavigationStack {
@@ -25,9 +28,12 @@ struct ContentView: View {
         }
         .preferredColorScheme(.dark)   // the whole app uses the dark theme
         .tint(Theme.primary)
+        // .task runs async work when the view first appears.
+        .task {
+            await authVM.restoreSession()
+        }
     }
 }
 
-#Preview {
-    ContentView()
-}
+// No #Preview here: ContentView needs Firebase configured (it runs only in the
+// simulator / device). Every other screen has its own preview.

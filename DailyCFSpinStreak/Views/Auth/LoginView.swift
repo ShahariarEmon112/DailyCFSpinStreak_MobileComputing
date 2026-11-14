@@ -36,7 +36,8 @@ struct LoginView: View {
 
                 PrimaryButton(title: "Log In", systemImage: "arrow.right.circle.fill",
                               isLoading: authVM.isLoading) {
-                    authVM.login(email: email, password: password)
+                    // Button actions are not async, so we start a Task to call async code.
+                    Task { await authVM.login(email: email, password: password) }
                 }
 
                 NavigationLink {

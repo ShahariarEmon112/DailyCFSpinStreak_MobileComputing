@@ -34,8 +34,16 @@ struct ProfileView: View {
                 TextField("Codeforces handle (e.g. tourist)", text: $handleInput)
                     .textInputAutocapitalization(.never)
                     .autocorrectionDisabled()
-                Button(user?.cfHandle == nil ? "Connect Handle" : "Update Handle") {
-                    authVM.connectHandle(handleInput)
+                Button {
+                    Task { await authVM.connectHandle(handleInput) }
+                } label: {
+                    HStack {
+                        Text(user?.cfHandle == nil ? "Connect Handle" : "Update Handle")
+                        if authVM.isLoading {
+                            Spacer()
+                            ProgressView()
+                        }
+                    }
                 }
                 .disabled(handleInput.trimmingCharacters(in: .whitespaces).isEmpty || authVM.isLoading)
             } header: {
