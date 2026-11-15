@@ -13,7 +13,7 @@
 
 import Foundation
 
-nonisolated struct Problem: Codable, Identifiable, Hashable {
+nonisolated struct Problem: Codable, Identifiable, Hashable, Sendable {
     let contestId: Int?      // optional: a few problems have no contest id
     let index: String        // "A", "B", "C1"...
     let name: String
