@@ -20,6 +20,11 @@ final class StatisticsViewModel: ObservableObject {
     /// Recalculated whenever `history` changes (computed property).
     var stats: UserStats { UserStats.from(history: history) }
 
+    /// Ids of every problem in the history (Spin avoids recommending these again).
+    var seenProblemIds: Set<String> {
+        Set(history.map { $0.id })
+    }
+
     /// True if there is a verified solve whose accepted submission is from today.
     var solvedToday: Bool {
         history.contains { entry in

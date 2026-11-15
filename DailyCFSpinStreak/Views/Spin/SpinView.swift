@@ -11,6 +11,8 @@ struct SpinView: View {
     @ObservedObject var problemVM: ProblemViewModel
     @ObservedObject var timerVM: TimerViewModel
     @ObservedObject var statsVM: StatisticsViewModel
+    /// Connected Codeforces handle (nil if not connected yet).
+    let cfHandle: String?
 
     private let tagColumns = [GridItem(.adaptive(minimum: 110), spacing: 8)]
 
@@ -22,7 +24,14 @@ struct SpinView: View {
 
                 PrimaryButton(title: "Spin", systemImage: "dice.fill",
                               color: Theme.streak, isLoading: problemVM.isLoading) {
-                    problemVM.spin()
+                    Task { await problemVM.spin(seenProblemIds: statsVM.seenProblemIds) }
+                }
+
+                if problemVM.loadedProblemCount > 0 {
+                    Text("\(problemVM.loadedProblemCount) problems loaded from Codeforces")
+                        .font(.caption)
+                        .foregroundStyle(Theme.textSecondary)
+                        .frame(maxWidth: .infinity)
                 }
 
                 resultSection
@@ -37,6 +46,10 @@ struct SpinView: View {
                               timerVM: timerVM, statsVM: statsVM)
         }
         .errorAlert($problemVM.errorMessage)
+        // Runs when the screen appears AND again whenever the handle changes.
+        .task(id: cfHandle) {
+            await problemVM.loadSolvedProblems(handle: cfHandle)
+        }
     }
 
     // MARK: - Rating range
@@ -117,12 +130,20 @@ struct SpinView: View {
     @ViewBuilder
     private var resultSection: some View {
         if problemVM.isLoading {
-            LoadingView(message: "Finding a problem...")
+            LoadingView(message: problemVM.loadedProblemCount == 0
+                        ? "Downloading problems from Codeforces..."
+                        : "Finding a problem...")
                 .frame(height: 160)
         } else if let problem = problemVM.currentProblem {
             VStack(spacing: 12) {
                 // Tags stay hidden here; they can be revealed as a hint while solving.
                 ProblemCard(problem: problem, showTags: false)
+
+                if let info = problemVM.infoMessage {
+                    Label(info, systemImage: "info.circle")
+                        .font(.footnote)
+                        .foregroundStyle(Theme.textSecondary)
+                }
 
                 NavigationLink(value: problem) {
                     PrimaryLabel(title: "Start Solving", systemImage: "play.fill")
@@ -141,7 +162,7 @@ struct SpinView: View {
 #Preview {
     NavigationStack {
         SpinView(problemVM: ProblemViewModel(), timerVM: TimerViewModel(),
-                 statsVM: StatisticsViewModel())
+                 statsVM: StatisticsViewModel(), cfHandle: nil)
     }
     .preferredColorScheme(.dark)
 }

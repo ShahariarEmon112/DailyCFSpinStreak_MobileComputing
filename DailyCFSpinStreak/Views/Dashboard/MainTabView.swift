@@ -36,7 +36,8 @@ struct MainTabView: View {
 
             Tab("Spin", systemImage: "dice.fill", value: AppTab.spin) {
                 NavigationStack {
-                    SpinView(problemVM: problemVM, timerVM: timerVM, statsVM: statsVM)
+                    SpinView(problemVM: problemVM, timerVM: timerVM, statsVM: statsVM,
+                             cfHandle: authVM.currentUser?.cfHandle)
                 }
             }
 

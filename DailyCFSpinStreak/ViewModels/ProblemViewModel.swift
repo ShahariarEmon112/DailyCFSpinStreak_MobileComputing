@@ -3,9 +3,7 @@
 //  DailyCFSpinStreak
 //
 //  Spin filters (rating range + tags), the spun problem, and the retry list.
-//
-//  STEP 2: spins from SampleData and keeps the retry list in memory.
-//  STEP 4/5: problems come from the Codeforces API, retry list from Firestore.
+//  Problems come from the Codeforces API (CodeforcesAPIService).
 //
 
 import Foundation
@@ -32,9 +30,18 @@ final class ProblemViewModel: ObservableObject {
     @Published var currentProblem: Problem?
     @Published var isLoading = false
     @Published var errorMessage: String?
+    /// Non-error note shown under the result (e.g. "this one may repeat").
+    @Published var infoMessage: String?
+    /// How many problems were downloaded from Codeforces (0 = not loaded yet).
+    @Published private(set) var loadedProblemCount = 0
+
+    /// Problem ids the user already got Accepted on Codeforces (never spun again).
+    @Published private(set) var solvedOnCodeforces: Set<String> = []
 
     // MARK: Retry list
     @Published var retryList: [Problem] = []
+
+    private let api = CodeforcesAPIService.shared
 
     // MARK: - Filters
 
@@ -55,24 +62,68 @@ final class ProblemViewModel: ObservableObject {
 
     /// True if the problem matches the rating range and has ALL selected tags.
     func matchesFilters(_ problem: Problem) -> Bool {
-        guard let rating = problem.rating else { return false }   // skip unrated
+        guard let rating = problem.rating else { return false }   // skip unrated problems
         guard rating >= minRating && rating <= maxRating else { return false }
         return selectedTags.isSubset(of: Set(problem.tagList))
     }
 
     // MARK: - Spin
 
-    func spin() {
+    /// Picks a random problem that matches the filters.
+    /// - Parameter seenProblemIds: problems already in the user's history (avoid repeats).
+    func spin(seenProblemIds: Set<String>) async {
         errorMessage = nil
-        let candidates = SampleData.problems.filter { matchesFilters($0) }
+        infoMessage = nil
+        isLoading = true
+        defer { isLoading = false }
 
-        // Prefer a different problem than the one already shown.
-        let fresh = candidates.filter { $0.id != currentProblem?.id }
-        if let picked = (fresh.isEmpty ? candidates : fresh).randomElement() {
+        // 1. Download the problem set (only the first time; then it is cached).
+        let allProblems: [Problem]
+        do {
+            allProblems = try await api.fetchProblems()
+            loadedProblemCount = allProblems.count
+        } catch {
+            errorMessage = error.localizedDescription
+            return
+        }
+
+        // 2. Keep only problems that match the rating range and tags.
+        let candidates = allProblems.filter { matchesFilters($0) }
+        if candidates.isEmpty {
+            currentProblem = nil
+            errorMessage = "No problem matches these filters. Try a wider rating range or fewer topics."
+            return
+        }
+
+        // 3. Prefer problems the user has never seen or solved.
+        let fresh = candidates.filter { problem in
+            !seenProblemIds.contains(problem.id)
+                && !solvedOnCodeforces.contains(problem.id)
+                && problem.id != currentProblem?.id
+        }
+
+        if let picked = fresh.randomElement() {
             currentProblem = picked
         } else {
-            currentProblem = nil
-            errorMessage = "No problem matches these filters. Try a wider rating range or fewer tags."
+            // Everything was already seen: allow a repeat rather than showing nothing.
+            currentProblem = candidates.randomElement()
+            infoMessage = "You have already seen every problem with these filters, so this one may be a repeat."
+        }
+    }
+
+    /// Downloads the user's submissions and remembers which problems are already
+    /// Accepted, so Spin does not recommend them. Failing here is not critical.
+    func loadSolvedProblems(handle: String?) async {
+        guard let handle, !handle.isEmpty else {
+            solvedOnCodeforces = []
+            return
+        }
+        do {
+            let submissions = try await api.fetchSubmissions(handle: handle)
+            solvedOnCodeforces = Set(submissions.filter { $0.isAccepted }.map { $0.problem.id })
+        } catch {
+            // Keep the old set; Spin still works without it.
+            print("Could not load solved problems: \(error.localizedDescription)")
         }
     }
 
