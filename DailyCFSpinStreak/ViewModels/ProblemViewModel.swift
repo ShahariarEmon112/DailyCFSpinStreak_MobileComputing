@@ -3,7 +3,8 @@
 //  DailyCFSpinStreak
 //
 //  Spin filters (rating range + tags), the spun problem, and the retry list.
-//  Problems come from the Codeforces API (CodeforcesAPIService).
+//  Problems come from the Codeforces API (CodeforcesAPIService),
+//  the retry list is stored in Firestore (FirebaseService).
 //
 
 import Foundation
@@ -42,6 +43,7 @@ final class ProblemViewModel: ObservableObject {
     @Published var retryList: [Problem] = []
 
     private let api = CodeforcesAPIService.shared
+    private let firebase = FirebaseService.shared
 
     // MARK: - Filters
 
@@ -129,17 +131,54 @@ final class ProblemViewModel: ObservableObject {
 
     // MARK: - Retry list
 
+    /// READ the saved problems from Firestore (called when the tabs appear).
+    func loadRetryList() async {
+        guard let uid = firebase.currentUserId else { return }
+        do {
+            retryList = try await firebase.fetchRetryList(uid: uid)
+        } catch {
+            errorMessage = "Could not load your retry list: \(error.localizedDescription)"
+        }
+    }
+
     func isInRetryList(_ problem: Problem) -> Bool {
         retryList.contains { $0.id == problem.id }
     }
 
-    func addToRetryList(_ problem: Problem) {
-        guard !isInRetryList(problem) else { return }   // no duplicates
-        retryList.insert(problem, at: 0)
+    /// CREATE: saves a problem for later.
+    func addToRetryList(_ problem: Problem) async {
+        guard !isInRetryList(problem), let uid = firebase.currentUserId else { return }   // no duplicates
+        do {
+            try await firebase.addToRetryList(uid: uid, problem: problem)
+            retryList.insert(problem, at: 0)
+        } catch {
+            errorMessage = "Could not save the problem: \(error.localizedDescription)"
+        }
     }
 
-    /// Called by List's swipe-to-delete (.onDelete gives us the row positions).
+    /// DELETE: called by List's swipe-to-delete (.onDelete gives us the row positions).
+    /// The row disappears immediately; Firestore is updated in the background.
     func removeFromRetryList(at offsets: IndexSet) {
+        let removed = offsets.map { retryList[$0] }
         retryList.remove(atOffsets: offsets)
+
+        guard let uid = firebase.currentUserId else { return }
+        Task {
+            for problem in removed {
+                do {
+                    try await firebase.removeFromRetryList(uid: uid, problemId: problem.id)
+                } catch {
+                    errorMessage = "Could not delete \(problem.name): \(error.localizedDescription)"
+                }
+            }
+        }
+    }
+
+    /// DELETE one problem (used after it gets verified as solved).
+    func removeSolvedProblem(_ problem: Problem) async {
+        guard let index = retryList.firstIndex(where: { $0.id == problem.id }),
+              let uid = firebase.currentUserId else { return }
+        retryList.remove(at: index)
+        try? await firebase.removeFromRetryList(uid: uid, problemId: problem.id)
     }
 }

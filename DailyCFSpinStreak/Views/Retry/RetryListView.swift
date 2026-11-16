@@ -31,6 +31,9 @@ struct RetryListView: View {
                     .onDelete(perform: problemVM.removeFromRetryList)   // swipe-to-delete
                 }
                 .scrollContentBackground(.hidden)
+                .refreshable {   // pull down to reload from Firestore
+                    await problemVM.loadRetryList()
+                }
             }
         }
         .screenBackground()
@@ -40,6 +43,7 @@ struct RetryListView: View {
                 EditButton()   // alternative to swiping: tap Edit, then the red buttons
             }
         }
+        .errorAlert($problemVM.errorMessage)
         .navigationDestination(for: Problem.self) { problem in
             ProblemDetailView(problem: problem, problemVM: problemVM,
                               timerVM: timerVM, statsVM: statsVM)
