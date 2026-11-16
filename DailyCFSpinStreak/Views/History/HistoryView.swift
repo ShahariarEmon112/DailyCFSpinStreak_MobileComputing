@@ -46,6 +46,10 @@ struct HistoryView: View {
         .scrollContentBackground(.hidden)
         .screenBackground()
         .navigationTitle("History")
+        .refreshable {   // pull down to reload from Firestore
+            await statsVM.loadHistory()
+        }
+        .errorAlert($statsVM.errorMessage)
     }
 
     private var statsGrid: some View {

@@ -59,12 +59,13 @@ struct MainTabView: View {
                 }
             }
         }
+        // Load the user's saved data from Firestore once, when the tabs appear.
+        .task {
+            await statsVM.loadHistory()
+            await problemVM.loadRetryList()
+        }
     }
 }
 
-#Preview {
-    let authVM = AuthenticationViewModel()
-    authVM.currentUser = SampleData.user
-    return MainTabView(authVM: authVM)
-        .preferredColorScheme(.dark)
-}
+// No #Preview: MainTabView loads data from Firebase in `.task`,
+// which only works in the simulator / on a device.

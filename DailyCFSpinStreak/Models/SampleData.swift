@@ -2,10 +2,9 @@
 //  SampleData.swift
 //  DailyCFSpinStreak
 //
-//  TEMPORARY placeholder data so the UI can be built and tested in Step 2
-//  before Firebase (Step 3) and the Codeforces API (Step 4) are connected.
-//  These are real Codeforces problems, but they are NOT API responses.
-//  This file is used only by SwiftUI previews once the real data arrives.
+//  Placeholder data used ONLY by SwiftUI #Preview blocks (the Xcode canvas).
+//  The running app never uses it: problems come from the Codeforces API and
+//  user data from Firestore. These are real Codeforces problems, typed by hand.
 //
 
 import Foundation
