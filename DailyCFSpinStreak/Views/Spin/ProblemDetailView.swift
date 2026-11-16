@@ -15,21 +15,29 @@ struct ProblemDetailView: View {
     @ObservedObject var timerVM: TimerViewModel
     @ObservedObject var statsVM: StatisticsViewModel
 
+    @State private var showBrowser = false
     @State private var showFinishAlert = false
     @State private var finishedSeconds = 0
 
-    // Environment value that opens a URL in Safari.
-    @Environment(\.openURL) private var openURL
+    /// .active (on screen), .inactive (e.g. Control Center open) or .background.
+    @Environment(\.scenePhase) private var scenePhase
+
+    /// Status of this problem in the history (nil = never worked on).
+    private var savedStatus: SolveStatus? { statsVM.entry(for: problem)?.status }
 
     var body: some View {
         ScrollView {
             VStack(spacing: 16) {
+                if let savedStatus {
+                    statusBanner(savedStatus)
+                }
+
                 // Tags are shown only after the hint is used.
                 ProblemCard(problem: problem, showTags: timerVM.hintUsed)
 
-                if let url = problem.url {
-                    SecondaryButton(title: "Open on Codeforces", systemImage: "safari") {
-                        openURL(url)
+                if problem.url != nil {
+                    SecondaryButton(title: "Open Problem Statement", systemImage: "safari") {
+                        showBrowser = true
                     }
                 }
 
@@ -40,7 +48,7 @@ struct ProblemDetailView: View {
                 SecondaryButton(title: problemVM.isInRetryList(problem) ? "Saved in Retry List" : "Save to Retry List",
                                 systemImage: problemVM.isInRetryList(problem) ? "bookmark.fill" : "bookmark",
                                 color: Theme.streak) {
-                    problemVM.addToRetryList(problem)
+                    Task { await problemVM.addToRetryList(problem) }
                 }
                 .disabled(problemVM.isInRetryList(problem))
 
@@ -51,18 +59,52 @@ struct ProblemDetailView: View {
         .screenBackground()
         .navigationTitle(problem.id)
         .navigationBarTitleDisplayMode(.inline)
+        // In-app browser: the app stays active, so the timer keeps running.
+        .sheet(isPresented: $showBrowser) {
+            if let url = problem.url {
+                SafariView(url: url)
+                    .ignoresSafeArea()
+            }
+        }
         // onAppear / onDisappear: lifecycle of THIS screen.
         .onAppear {
-            timerVM.prepare(for: problem)   // new problem → fresh timer
+            timerVM.prepare(for: problem)   // different problem → fresh timer
         }
         .onDisappear {
-            timerVM.pause()                 // leaving the screen pauses the timer
+            // Leaving the screen (Back button or another tab) pauses the timer.
+            timerVM.pauseAutomatically(reason: "Paused because you left the problem screen.")
+            saveProgress()
+        }
+        // App lifecycle: pause when the whole app goes to the background.
+        .onChange(of: scenePhase) {
+            if scenePhase == .background {
+                timerVM.pauseAutomatically(reason: "Paused because the app went to the background.")
+                saveProgress()
+            }
         }
         .alert("Saved as finished", isPresented: $showFinishAlert) {
             Button("OK", role: .cancel) {}
         } message: {
-            Text("Time: \(DisplayFormat.duration(finishedSeconds)). This is a manual finish, so it does NOT count toward your verified streak. Submit on Codeforces, then tap Verify.")
+            Text(savedStatus == .verified
+                 ? "Time: \(DisplayFormat.duration(finishedSeconds)). This problem is already verified."
+                 : "Time: \(DisplayFormat.duration(finishedSeconds)). This is a manual finish, so it does NOT count toward your verified streak. Submit on Codeforces, then tap Verify.")
         }
+        .errorAlert($problemVM.errorMessage)
+        .errorAlert($statsVM.errorMessage)
+    }
+
+    // MARK: - Status banner
+
+    private func statusBanner(_ status: SolveStatus) -> some View {
+        let color: Color = status == .verified ? Theme.primary : (status == .finished ? Theme.info : Theme.textSecondary)
+        let icon = status == .verified ? "checkmark.seal.fill" : (status == .finished ? "flag.checkered" : "hourglass")
+        return Label("Status: \(status.title)", systemImage: icon)
+            .font(.subheadline.weight(.semibold))
+            .foregroundStyle(color)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(12)
+            .background(color.opacity(0.12))
+            .clipShape(RoundedRectangle(cornerRadius: 12))
     }
 
     // MARK: - Hint
@@ -110,11 +152,23 @@ struct ProblemDetailView: View {
 
     // MARK: - Actions
 
+    /// Saves an "attempted" entry if the timer was used but not finished.
+    private func saveProgress() {
+        guard timerVM.hasStarted, timerVM.activeProblemId == problem.id else { return }
+        let seconds = timerVM.elapsedSeconds
+        let hintUsed = timerVM.hintUsed
+        Task {
+            await statsVM.recordAttempt(problem: problem, durationSeconds: seconds, hintUsed: hintUsed)
+        }
+    }
+
     private func finishSolving() {
         let hintUsed = timerVM.hintUsed
         finishedSeconds = timerVM.finish()
-        statsVM.recordFinished(problem: problem, durationSeconds: finishedSeconds, hintUsed: hintUsed)
-        showFinishAlert = true
+        Task {
+            await statsVM.recordFinished(problem: problem, durationSeconds: finishedSeconds, hintUsed: hintUsed)
+            showFinishAlert = true
+        }
     }
 }
 

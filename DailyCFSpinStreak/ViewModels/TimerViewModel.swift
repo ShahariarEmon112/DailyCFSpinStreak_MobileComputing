@@ -25,6 +25,8 @@ final class TimerViewModel: ObservableObject {
     @Published private(set) var hasStarted = false
     /// True once the user tapped "Show Hint" for the current problem.
     @Published private(set) var hintUsed = false
+    /// Explains an automatic pause, e.g. "Paused because you left the app."
+    @Published private(set) var autoPauseReason: String?
 
     /// The problem this timer belongs to (so opening another problem starts fresh).
     private(set) var activeProblemId: String?
@@ -47,6 +49,7 @@ final class TimerViewModel: ObservableObject {
 
     func start() {
         guard !isRunning else { return }
+        autoPauseReason = nil
         hasStarted = true
         isRunning = true
         runningSince = Date()
@@ -64,6 +67,14 @@ final class TimerViewModel: ObservableObject {
 
     func resume() {
         start()
+    }
+
+    /// Pause caused by the app (leaving the screen, app going to background),
+    /// not by the user. Remembers the reason so the screen can explain it.
+    func pauseAutomatically(reason: String) {
+        guard isRunning else { return }
+        pause()
+        autoPauseReason = reason
     }
 
     /// Stops the timer and returns the total solving time in seconds.
@@ -88,6 +99,7 @@ final class TimerViewModel: ObservableObject {
 
     private func clearTime() {
         stopTicking()
+        autoPauseReason = nil
         accumulatedSeconds = 0
         runningSince = nil
         elapsedSeconds = 0

@@ -10,8 +10,8 @@ Built as a Mobile Computing lab mini-project.
 - [x] Step 1: Project inspection and plan
 - [x] Step 2: SwiftUI UI and navigation (placeholder data)
 - [x] Step 3: Firebase Authentication and Firestore
-- [ ] Step 4: Codeforces API and JSON parsing
-- [ ] Step 5: Spin, timer, hints, retry list, history with real data
+- [x] Step 4: Codeforces API and JSON parsing
+- [x] Step 5: Spin, timer, hints, retry list, history with real data
 - [ ] Step 6: Accepted-submission verification and daily streak
 - [ ] Step 7: Testing, polish and documentation
 
@@ -41,8 +41,8 @@ Firestore layout:
 
 ```
 users/{uid}                      profile: name, email, cfHandle, currentStreak, longestStreak, verifiedDays
-users/{uid}/history/{problemId}  one solve attempt (Step 5)
-users/{uid}/retry/{problemId}    saved problem (Step 5)
+users/{uid}/history/{problemId}  one solve attempt (doc id = problem id, e.g. "4A")
+users/{uid}/retry/{problemId}    saved problem + addedAt
 ```
 
 ## Folder structure (MVVM)

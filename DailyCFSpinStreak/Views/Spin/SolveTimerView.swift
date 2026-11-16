@@ -40,6 +40,12 @@ struct SolveTimerView: View {
                 .frame(maxWidth: .infinity)
                 .accessibilityLabel("Elapsed time \(timerVM.formattedTime)")
 
+            if let reason = timerVM.autoPauseReason {
+                Label(reason, systemImage: "pause.circle")
+                    .font(.footnote)
+                    .foregroundStyle(Theme.streak)
+            }
+
             HStack(spacing: 12) {
                 if !timerVM.hasStarted {
                     PrimaryButton(title: "Start", systemImage: "play.fill") {
