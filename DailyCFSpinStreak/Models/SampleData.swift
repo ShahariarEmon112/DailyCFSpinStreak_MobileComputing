@@ -19,8 +19,12 @@ enum SampleData {
         Problem(contestId: 455, index: "A", name: "Boredom", rating: 1500, tags: ["dp"]),
     ]
 
+    /// Solved today, yesterday and the day before → current streak 3.
     static let user = AppUser(id: "preview-uid", name: "Demo Coder", email: "demo@example.com",
-                              cfHandle: nil, currentStreak: 3, longestStreak: 7)
+                              cfHandle: "demo_handle", currentStreak: 3, longestStreak: 7,
+                              verifiedDays: [-2, -1, 0].map { daysAgo in
+                                  StreakService.dayKey(for: Date().addingTimeInterval(Double(daysAgo) * 86_400))
+                              })
 
     static let history: [SolveHistory] = [
         SolveHistory(problem: problems[5], durationSeconds: 1860, hintUsed: true,
