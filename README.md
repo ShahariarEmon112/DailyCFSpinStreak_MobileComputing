@@ -12,7 +12,7 @@ Built as a Mobile Computing lab mini-project.
 - [x] Step 3: Firebase Authentication and Firestore
 - [x] Step 4: Codeforces API and JSON parsing
 - [x] Step 5: Spin, timer, hints, retry list, history with real data
-- [ ] Step 6: Accepted-submission verification and daily streak
+- [x] Step 6: Accepted-submission verification and daily streak
 - [ ] Step 7: Testing, polish and documentation
 
 ## Requirements

@@ -8,11 +8,12 @@
 import SwiftUI
 
 struct SpinView: View {
+    @ObservedObject var authVM: AuthenticationViewModel
     @ObservedObject var problemVM: ProblemViewModel
     @ObservedObject var timerVM: TimerViewModel
     @ObservedObject var statsVM: StatisticsViewModel
     /// Connected Codeforces handle (nil if not connected yet).
-    let cfHandle: String?
+    private var cfHandle: String? { authVM.currentUser?.cfHandle }
 
     private let tagColumns = [GridItem(.adaptive(minimum: 110), spacing: 8)]
 
@@ -42,7 +43,7 @@ struct SpinView: View {
         .navigationTitle("Spin")
         // Value-based navigation: NavigationLink(value: problem) below opens this.
         .navigationDestination(for: Problem.self) { problem in
-            ProblemDetailView(problem: problem, problemVM: problemVM,
+            ProblemDetailView(problem: problem, authVM: authVM, problemVM: problemVM,
                               timerVM: timerVM, statsVM: statsVM)
         }
         .errorAlert($problemVM.errorMessage)
@@ -161,8 +162,8 @@ struct SpinView: View {
 
 #Preview {
     NavigationStack {
-        SpinView(problemVM: ProblemViewModel(), timerVM: TimerViewModel(),
-                 statsVM: StatisticsViewModel(), cfHandle: nil)
+        SpinView(authVM: AuthenticationViewModel(), problemVM: ProblemViewModel(),
+                 timerVM: TimerViewModel(), statsVM: StatisticsViewModel())
     }
     .preferredColorScheme(.dark)
 }

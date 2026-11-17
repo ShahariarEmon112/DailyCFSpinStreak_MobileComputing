@@ -11,6 +11,7 @@ import SwiftUI
 
 struct ProblemDetailView: View {
     let problem: Problem
+    @ObservedObject var authVM: AuthenticationViewModel
     @ObservedObject var problemVM: ProblemViewModel
     @ObservedObject var timerVM: TimerViewModel
     @ObservedObject var statsVM: StatisticsViewModel
@@ -21,6 +22,12 @@ struct ProblemDetailView: View {
 
     /// .active (on screen), .inactive (e.g. Control Center open) or .background.
     @Environment(\.scenePhase) private var scenePhase
+
+    /// true while statsVM has a verification message to show.
+    private var verificationAlertShown: Binding<Bool> {
+        Binding(get: { statsVM.verificationMessage != nil },
+                set: { if !$0 { statsVM.verificationMessage = nil } })
+    }
 
     /// Status of this problem in the history (nil = never worked on).
     private var savedStatus: SolveStatus? { statsVM.entry(for: problem)?.status }
@@ -89,6 +96,11 @@ struct ProblemDetailView: View {
                  ? "Time: \(DisplayFormat.duration(finishedSeconds)). This problem is already verified."
                  : "Time: \(DisplayFormat.duration(finishedSeconds)). This is a manual finish, so it does NOT count toward your verified streak. Submit on Codeforces, then tap Verify.")
         }
+        .alert("Verification", isPresented: verificationAlertShown) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(statsVM.verificationMessage ?? "")
+        }
         .errorAlert($problemVM.errorMessage)
         .errorAlert($statsVM.errorMessage)
     }
@@ -136,18 +148,33 @@ struct ProblemDetailView: View {
         .cardStyle()
     }
 
-    // MARK: - Verify (implemented in Step 6)
+    // MARK: - Verify (Codeforces API)
 
     private var verifyCard: some View {
-        VStack(spacing: 8) {
-            SecondaryButton(title: "Verify on Codeforces", systemImage: "checkmark.shield",
-                            color: Theme.primary) {}
-                .disabled(true)
-                .opacity(0.5)
-            Text("Accepted-submission verification is added in Step 6.")
-                .font(.caption)
-                .foregroundStyle(Theme.textSecondary)
+        VStack(alignment: .leading, spacing: 10) {
+            Label("Verified Streak", systemImage: "checkmark.shield")
+                .font(.headline)
+                .foregroundStyle(Theme.textPrimary)
+
+            if savedStatus == .verified {
+                Text("Verified with an Accepted submission on Codeforces. It counts toward your streak.")
+                    .font(.footnote)
+                    .foregroundStyle(Theme.primary)
+            } else if let handle = authVM.currentUser?.cfHandle {
+                Text("Submit your solution on Codeforces as \(handle), then tap Verify. Only an Accepted verdict counts toward your streak.")
+                    .font(.footnote)
+                    .foregroundStyle(Theme.textSecondary)
+                PrimaryButton(title: "Verify Accepted Submission", systemImage: "checkmark.seal.fill",
+                              isLoading: statsVM.isVerifying) {
+                    verifySolve()
+                }
+            } else {
+                Text("Connect your Codeforces handle in the Profile tab to verify solves and build your streak.")
+                    .font(.footnote)
+                    .foregroundStyle(Theme.streak)
+            }
         }
+        .cardStyle()
     }
 
     // MARK: - Actions
@@ -159,6 +186,21 @@ struct ProblemDetailView: View {
         let hintUsed = timerVM.hintUsed
         Task {
             await statsVM.recordAttempt(problem: problem, durationSeconds: seconds, hintUsed: hintUsed)
+        }
+    }
+
+    private func verifySolve() {
+        guard let user = authVM.currentUser else { return }
+        // Read the timer without stopping it: if verification fails the user keeps solving.
+        let seconds = timerVM.activeProblemId == problem.id ? timerVM.elapsedSeconds : 0
+        let hintUsed = timerVM.hintUsed
+        Task {
+            if let updatedUser = await statsVM.verifySolve(problem: problem, user: user,
+                                                           durationSeconds: seconds, hintUsed: hintUsed) {
+                authVM.currentUser = updatedUser          // Dashboard shows the new streak
+                _ = timerVM.finish()                       // solved → stop the clock
+                await problemVM.removeSolvedProblem(problem)   // no longer needs a retry
+            }
         }
     }
 
@@ -174,7 +216,8 @@ struct ProblemDetailView: View {
 
 #Preview {
     NavigationStack {
-        ProblemDetailView(problem: SampleData.problems[4], problemVM: ProblemViewModel(),
+        ProblemDetailView(problem: SampleData.problems[4], authVM: AuthenticationViewModel(),
+                          problemVM: ProblemViewModel(),
                           timerVM: TimerViewModel(), statsVM: StatisticsViewModel())
     }
     .preferredColorScheme(.dark)

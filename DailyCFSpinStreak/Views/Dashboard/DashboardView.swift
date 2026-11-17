@@ -17,6 +17,11 @@ struct DashboardView: View {
 
     private var user: AppUser? { authVM.currentUser }
 
+    /// Today counts only if a VERIFIED solve happened today (local date).
+    private var solvedToday: Bool {
+        user?.verifiedDays.contains(StreakService.dayKey(for: Date())) ?? false
+    }
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
@@ -69,6 +74,11 @@ struct DashboardView: View {
         }
         .screenBackground()
         .navigationTitle("Dashboard")
+        // Recalculate the streak every time the dashboard appears
+        // (e.g. it becomes 0 if the user missed yesterday).
+        .task {
+            await authVM.refreshStreak()
+        }
     }
 
     // MARK: - Streak card (the most important thing on screen)
@@ -101,12 +111,12 @@ struct DashboardView: View {
             }
 
             // Today's progress
-            Label(statsVM.solvedToday
+            Label(solvedToday
                     ? "Today's verified solve is done. Streak safe!"
                     : "No verified solve today yet. Spin and solve one!",
-                  systemImage: statsVM.solvedToday ? "checkmark.circle.fill" : "exclamationmark.circle")
+                  systemImage: solvedToday ? "checkmark.circle.fill" : "exclamationmark.circle")
                 .font(.footnote.weight(.medium))
-                .foregroundStyle(statsVM.solvedToday ? Theme.primary : Theme.textSecondary)
+                .foregroundStyle(solvedToday ? Theme.primary : Theme.textSecondary)
         }
         .cardStyle()
         .overlay(

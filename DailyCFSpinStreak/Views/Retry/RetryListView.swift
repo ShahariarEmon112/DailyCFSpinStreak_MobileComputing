@@ -9,6 +9,7 @@
 import SwiftUI
 
 struct RetryListView: View {
+    @ObservedObject var authVM: AuthenticationViewModel
     @ObservedObject var problemVM: ProblemViewModel
     @ObservedObject var timerVM: TimerViewModel
     @ObservedObject var statsVM: StatisticsViewModel
@@ -45,7 +46,7 @@ struct RetryListView: View {
         }
         .errorAlert($problemVM.errorMessage)
         .navigationDestination(for: Problem.self) { problem in
-            ProblemDetailView(problem: problem, problemVM: problemVM,
+            ProblemDetailView(problem: problem, authVM: authVM, problemVM: problemVM,
                               timerVM: timerVM, statsVM: statsVM)
         }
     }
@@ -76,7 +77,8 @@ private struct RetryRow: View {
     let problemVM = ProblemViewModel()
     problemVM.retryList = Array(SampleData.problems.prefix(3))
     return NavigationStack {
-        RetryListView(problemVM: problemVM, timerVM: TimerViewModel(), statsVM: StatisticsViewModel())
+        RetryListView(authVM: AuthenticationViewModel(), problemVM: problemVM,
+                      timerVM: TimerViewModel(), statsVM: StatisticsViewModel())
     }
     .preferredColorScheme(.dark)
 }

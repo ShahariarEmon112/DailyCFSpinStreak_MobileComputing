@@ -36,8 +36,7 @@ struct MainTabView: View {
 
             Tab("Spin", systemImage: "dice.fill", value: AppTab.spin) {
                 NavigationStack {
-                    SpinView(problemVM: problemVM, timerVM: timerVM, statsVM: statsVM,
-                             cfHandle: authVM.currentUser?.cfHandle)
+                    SpinView(authVM: authVM, problemVM: problemVM, timerVM: timerVM, statsVM: statsVM)
                 }
             }
 
@@ -49,7 +48,7 @@ struct MainTabView: View {
 
             Tab("Retry", systemImage: "bookmark.fill", value: AppTab.retry) {
                 NavigationStack {
-                    RetryListView(problemVM: problemVM, timerVM: timerVM, statsVM: statsVM)
+                    RetryListView(authVM: authVM, problemVM: problemVM, timerVM: timerVM, statsVM: statsVM)
                 }
             }
 
