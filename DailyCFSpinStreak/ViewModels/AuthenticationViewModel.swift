@@ -21,6 +21,7 @@ final class AuthenticationViewModel: ObservableObject {
     var isLoggedIn: Bool { currentUser != nil }
 
     private let firebase = FirebaseService.shared
+    private let api = CodeforcesAPIService.shared
 
     // MARK: - Session persistence
 
@@ -108,8 +109,7 @@ final class AuthenticationViewModel: ObservableObject {
         }
     }
 
-    /// Saves the Codeforces handle to Firestore.
-    /// Step 6 will first check with the Codeforces API that the handle exists.
+    /// Checks with the Codeforces API that the handle exists, then saves it to Firestore.
     func connectHandle(_ handle: String) async {
         let trimmed = handle.trimmingCharacters(in: .whitespaces)
         guard !trimmed.isEmpty else {
@@ -121,12 +121,37 @@ final class AuthenticationViewModel: ObservableObject {
         isLoading = true
         defer { isLoading = false }
 
+        // 1. Does this handle exist? (user.info returns FAILED for unknown handles.)
+        let codeforcesUser: CodeforcesUser
         do {
-            try await firebase.updateHandle(uid: uid, handle: trimmed)
-            currentUser?.cfHandle = trimmed
+            codeforcesUser = try await api.fetchUser(handle: trimmed)
+        } catch {
+            errorMessage = error.localizedDescription
+            return
+        }
+
+        // 2. Save the correctly capitalised handle.
+        do {
+            try await firebase.updateHandle(uid: uid, handle: codeforcesUser.handle)
+            currentUser?.cfHandle = codeforcesUser.handle
         } catch {
             errorMessage = "Could not save handle: \(error.localizedDescription)"
         }
+    }
+
+    /// The saved currentStreak can be out of date (e.g. the user missed a day since
+    /// the last solve). Recalculate it from verifiedDays and save it if it changed.
+    func refreshStreak() async {
+        guard var user = currentUser else { return }
+        let actualStreak = StreakService.currentStreak(verifiedDays: user.verifiedDays)
+        guard actualStreak != user.currentStreak else { return }
+
+        user.currentStreak = actualStreak
+        currentUser = user
+        try? await firebase.updateStreak(uid: user.id,
+                                         verifiedDays: user.verifiedDays,
+                                         currentStreak: user.currentStreak,
+                                         longestStreak: user.longestStreak)
     }
 
     // MARK: - Helpers
@@ -137,6 +162,7 @@ final class AuthenticationViewModel: ObservableObject {
         do {
             if let profile = try await firebase.fetchUserProfile(uid: uid) {
                 currentUser = profile
+                await refreshStreak()
             } else {
                 let fallbackName = email.split(separator: "@").first.map(String.init) ?? "Coder"
                 let newUser = AppUser(id: uid, name: fallbackName, email: email)
