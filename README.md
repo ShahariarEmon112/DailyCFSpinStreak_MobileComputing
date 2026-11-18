@@ -13,7 +13,18 @@ Built as a Mobile Computing lab mini-project.
 - [x] Step 4: Codeforces API and JSON parsing
 - [x] Step 5: Spin, timer, hints, retry list, history with real data
 - [x] Step 6: Accepted-submission verification and daily streak
-- [ ] Step 7: Testing, polish and documentation
+- [x] Step 7: Review, polish and documentation
+
+## Features
+
+- Email/password accounts with Firebase Auth; the session survives app restarts
+- **Spin** a random real Codeforces problem by rating range and topics (avoids problems you have already seen or solved)
+- **Solve timer** with pause/resume/finish; auto-pauses when you leave the screen or the app goes to the background
+- **Hidden tags** you can reveal as a hint (recorded in history)
+- **Verified streak**: only an Accepted submission found through the Codeforces API counts; manual "Finish" never does
+- **Retry list** with swipe-to-delete, **history** and **statistics**, all stored in Firestore
+
+📘 Full guide (architecture, functions, viva Q&A, modification tasks): [`docs/PROJECT_GUIDE.md`](docs/PROJECT_GUIDE.md)
 
 ## Requirements
 
@@ -51,9 +62,9 @@ users/{uid}/retry/{problemId}    saved problem + addedAt
 DailyCFSpinStreak/
 ├── DailyCFSpinStreakApp.swift   app entry point
 ├── ContentView.swift            root: Login flow or MainTabView
-├── Models/                      Problem, AppUser, SolveHistory, UserStats, SampleData
+├── Models/                      Problem, AppUser, SolveHistory, UserStats, Submission, CodeforcesResponse
 ├── ViewModels/                  Authentication, Problem, Timer, Statistics
-├── Services/                    FirebaseService (Step 3), Codeforces API, Streak
+├── Services/                    FirebaseService, CodeforcesAPIService, StreakService
 ├── Views/                       Auth, Dashboard, Spin, History, Retry, Profile
 └── Components/                  Theme + reusable views (cards, buttons, chips...)
 ```
