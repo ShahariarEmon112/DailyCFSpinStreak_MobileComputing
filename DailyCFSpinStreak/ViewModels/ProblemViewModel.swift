@@ -160,7 +160,8 @@ final class ProblemViewModel: ObservableObject {
     /// The row disappears immediately; Firestore is updated in the background.
     func removeFromRetryList(at offsets: IndexSet) {
         let removed = offsets.map { retryList[$0] }
-        retryList.remove(atOffsets: offsets)
+        let removedIds = Set(removed.map { $0.id })
+        retryList.removeAll { removedIds.contains($0.id) }
 
         guard let uid = firebase.currentUserId else { return }
         Task {
