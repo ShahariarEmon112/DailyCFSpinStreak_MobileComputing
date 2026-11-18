@@ -26,6 +26,8 @@ Built as a Mobile Computing lab mini-project.
 
 📘 Full guide (architecture, functions, viva Q&A, modification tasks): [`docs/PROJECT_GUIDE.md`](docs/PROJECT_GUIDE.md)
 
+🖥️ How to run it on a Mac (step by step + troubleshooting): [`docs/RUN_ON_MACOS.md`](docs/RUN_ON_MACOS.md)
+
 ## Requirements
 
 - Xcode with the iOS 18+ SDK (deployment target: **iOS 18.0**)
